@@ -22,6 +22,41 @@ $app = new App($settings);
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->safeLoad();
 
+// This is the middleware
+// It will add the Access-Control-Allow-Methods header to every request
+
+// $app->add(function($request, $response, $next) {
+//     $route = $request->getAttribute("route");
+
+//     $methods = [];
+
+//     if (!empty($route)) {
+//         $pattern = $route->getPattern();
+
+//         foreach ($this->router->getRoutes() as $route) {
+//             if ($pattern === $route->getPattern()) {
+//                 $methods = array_merge_recursive($methods, $route->getMethods());
+//             }
+//         }
+//         //Methods holds all of the HTTP Verbs that a particular route handles.
+//     } else {
+//         $methods[] = $request->getMethod();
+//     }
+
+//     $response = $next($request, $response);
+
+
+//     return $response->withHeader("Access-Control-Allow-Methods", implode(",", $methods));
+// });
+
+$app->add(Function ($req,$res,$next){
+    $response = $next($req,$res);
+   return $response->withHeader("Access-Control-Allow-Origin","*")
+        ->withHeader("Access-Control-Allow-Headers","X-Requested-With,Content-Type,Accept,Origin,Authorization")
+        ->withHeader("Access-Control-Allow-Methods","GET,POST,PUT,PATCH,OPTIONS,DELETE")
+        ->withHeader("Access-Control-Allow-Credentials","true");
+ });
+
 // Get Container
 $container = $app->getContainer();
 
@@ -50,7 +85,7 @@ $app->post('/google-cloud-api/upload-single', function (Request $request,Respons
     $status = 400;
 
     // User-submitted RAW data
-    // $bucketName = "nbi-photos";
+    //$bucketName = "nbi-photos";
     $uploadedFiles = $request->getUploadedFiles(); //HTTPFile
     $arrayOfFileTypes = getParam($request, "file_types"); //JSON string
     $bucketName = getParam($request, "bucket_name"); //string
@@ -65,6 +100,11 @@ $app->post('/google-cloud-api/upload-single', function (Request $request,Respons
             $retVal = "Empty or Invalid file format";
             $isValid = false;
         }
+        if (empty($uploadedFiles['file'])) {
+            $retVal = "Empty or Invalid file format";
+            $isValid = false;
+        }
+
 
         // Check if no errors on upload
         if($isValid && $uploadedFile->getError()){
