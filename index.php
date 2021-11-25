@@ -1,14 +1,17 @@
 <?php
 use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
+use Google\Cloud\Storage\StorageClient;
+use Slim\Http\UploadedFile;
+
+use Slim\App;
 
 require './vendor/autoload.php';
 
-// Create and configure Slim app
-$config = ['settings' => [
-    'addContentLengthHeader' => false,
-]];
-$app = new \Slim\App($config);
+require './settings.php';
+
+// Create app
+$app = new App($settings);
 
 // Define app routes
 $app->get('/hello/{name}', function ($request, $response, $args) {
