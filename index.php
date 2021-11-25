@@ -189,7 +189,7 @@ $app->post('/google-cloud-api/upload-single', function (Request $request,Respons
         $retVal = uploadObject($bucketName, $objectName, $source);
 
         if($retVal['status'] == 200){
-            $fileLocation = "https://storage.googleapis.com/$bucketName/$objectName";
+            $fileLocation = "https://storage.googleapis.com/$bucketName/";
             $status = 200;
         } else {
             $status = 500;
