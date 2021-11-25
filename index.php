@@ -35,7 +35,7 @@ $app->get('/hello/{name}', function (Request $request,Response $response, array 
     return $response->write("Hello " . $args['name']);
 });
 
-// Define google cloud upload route
+// Define google cloud upload route (Single File Upload)
 $app->post('/google-cloud-api/upload-single', function (Request $request,Response $response) {
     putenv('GOOGLE_APPLICATION_CREDENTIALS='.$_ENV['GOOGLE_APPLICATION_CREDENTIALS']); 
 
@@ -47,6 +47,7 @@ $app->post('/google-cloud-api/upload-single', function (Request $request,Respons
 
     $retVal = "";
     $isValid = true;
+    $status = 400;
 
     // User-submitted RAW data
     // $bucketName = "nbi-photos";
@@ -128,80 +129,89 @@ $app->post('/google-cloud-api/upload-single', function (Request $request,Respons
 
     // VALIDATION 6: check if bucket name is a valid bucket name
         // get list of buckets from google api
-            // $retVal = $uploadedFile->getSize();
+        $buckets = $storage->buckets();
+        $bucket_list = [];
+        foreach( $buckets as $bucket){
+            array_push($bucket_list,  $bucket->name());
+        }
+        // check array
+        if($isValid && !in_array($bucketName, $bucket_list)){
+            $retVal = "Invalid bucket name. $bucketName is not in list of buckets.";
+            $isValid = false;
+        }
 
+    // PREPARE FILES for upload
+    // =============================================
+    // when everything is good to go, we upload the files
+    // Function that reformats the file name to random name
+    function renameFile($ext) {
+        $basename = bin2hex(random_bytes(50)); // see http://php.net/manual/en/function.random-bytes.php
+        $filename = sprintf('%s.%0.8s', $basename, $ext);
+        return $filename;
+    }
 
-        //$retVal = $extension ;
+    // Function that Uploads the bucket into the Google Cloud Storage location
+    function uploadObject($bucketName, $objectName, $source)
+    {
+        // $bucketName = 'my-bucket';
+        // $objectName = 'my-object';
+        // $source = '/path/to/your/file';
 
-    // $retVal = gettype($decodedarray_file_type);
+        $storage = new StorageClient();
+        $file = fopen($source, 'r');
+        $bucket = $storage->bucket($bucketName);
 
-    // $extension = strtolower(pathinfo($uploadedFile->getClientFilename(), PATHINFO_EXTENSION));
-    // $allowed = array("pdf", "jpeg", "jpeg", "png");
-    // $newFileName = "";
+        try{
+            $object = $bucket->upload($file, [
+                'name' => $objectName
+            ]);
+        } catch (GoogleException $e){
+            $response = [];
+            $response['message'] = $e->getMessage();
+            $response['status'] = 500;
+            return $response;
+        }
 
-    // // Function that reformats the file name to random name
-    // function renameFile($ext) {
-    //     $basename = bin2hex(random_bytes(50)); // see http://php.net/manual/en/function.random-bytes.php
-    //     $filename = sprintf('%s.%0.8s', $basename, $ext);
-    //     return $filename;
-    // }
+        $response = [];
+        $response['message'] = "Uploaded ".basename($source)." to gs://".$bucketName."/".$objectName;
+        $response['status'] = 200;
+        return $response;
+    }
 
-    // // Uploads the bucket into the Google Cloud Storage location
-    // function uploadObject($bucketName, $objectName, $source)
-    // {
-    //     // $bucketName = 'my-bucket';
-    //     // $objectName = 'my-object';
-    //     // $source = '/path/to/your/file';
+    $fileLocation =  "";
 
-    //     $storage = new StorageClient();
-    //     $file = fopen($source, 'r');
-    //     $bucket = $storage->bucket($bucketName);
-    //     $object = $bucket->upload($file, [
-    //         'name' => $objectName
-    //     ]);
-    //     printf('Uploaded %s to gs://%s/%s' . PHP_EOL, basename($source), $bucketName, $objectName);
-    // }
+    // Upload the file
+    if($isValid){ 
 
-    // // Check if bucket name empty 
-    // if($isValid && $bucketName == null){
-    //     $retVal = "No bucket name was provided. Please specify a bucket";
-    //     $isValid = false;
-    // }
+        $objectName = renameFile($extension);
+        $source = $uploadedFile->file;
 
-    // // Check if bucket name exists 
-    // if($isValid){
+        $retVal = uploadObject($bucketName, $objectName, $source);
 
-    // }
-
-    // // Check if file name exists in the bucket
-    // if($isValid){
-
-    // }
-
-    // // Upload the file
-    // if($isValid){ 
-    //     // $status = $result == false? 400 : 200;
-    //     // $retVal = $result == false? "There was something wrong with the file transfer" : "File was uploaded successfully.";
-
-    //     $objectName = renameFile($extension);
-    //     $source = $uploadedFile->file;
-
-    //     // uploadObject($bucketName, $objectName, $source);
-
-    //     // $fileLocation = "https://storage.googleapis.com/$bucketName/$objectName";
-    //     $status = 200;
-    //     $retval = "File successfully uploaded to $bucketName";
-    // }
+        if($retVal['status'] == 200){
+            $fileLocation = "https://storage.googleapis.com/$bucketName/$objectName";
+            $status = 200;
+        } else {
+            $status = 500;
+        }
+    }
 
     // Return 400 error on invalid request
-    if($isValid == false){
+    if($isValid == false && $status == 400){
         return is400Response($response,$retVal);
+    } 
+
+    // Return 500 error on invalid request
+    if($isValid == false && $status == 500){
+        return is500Response($response,$retVal);
     } 
 
     // Succeed if everything is good
     //$retVal = "everything good";
     return is200Response($response,$retVal);
 });
+
+
 
 // Define message bird SMS route
 $app->get('/messagebird/test', function (Request $request, Response $response) {
