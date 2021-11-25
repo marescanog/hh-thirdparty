@@ -114,5 +114,35 @@ $app->post('/google-cloud-api/upload-single', function ($request, $response) {
     return $response;
 });
 
+// Define message bird SMS route
+$app->get('/messagebird/test', function (Request $request, Response $response) {
+    // Load and initialize MessageBird SDK
+    $messagebird = new MessageBird\Client($_ENV['MESSAGEBIRD_API_KEY']);
+
+    // Create verify object
+    $verify = new \MessageBird\Objects\Verify();
+    $verify->recipient = $_ENV['TEST_NUMBER'];
+
+    $extraOptions = [
+        'originator' => '',
+        'timeout' => 60*5,
+        'type' => 'sms',
+    ];
+
+    // Make Request to Verify API
+    try{
+        $result = $verifyResult = $messagebird->verify->create($verify, $extraOptions);
+    } catch (Exception $e){
+        // Request has failed
+        return $response->getBody()->write("SMS request has failed".$e->getMessage());
+    }
+
+    // Request was successful
+    $response->getBody()->write("SMS Request Successful");
+
+    return $response;
+});
+
+
 // Run app
 $app->run();
