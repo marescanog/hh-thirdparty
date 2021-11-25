@@ -8,7 +8,7 @@ use Slim\App;
 
 require './vendor/autoload.php';
 
-$settings = require_once  __DIR__ ."./settings.php";
+$settings = require_once  __DIR__ ."/settings.php";
 
 // Create app
 $app = new App($settings);
