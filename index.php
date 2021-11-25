@@ -179,7 +179,7 @@ $app->post('/google-cloud-api/upload-single', function (Request $request,Respons
     }
 
     $fileLocation =  "";
-
+    $objectName = "";
     // Upload the file
     if($isValid){ 
 
@@ -207,8 +207,11 @@ $app->post('/google-cloud-api/upload-single', function (Request $request,Respons
     } 
 
     // Succeed if everything is good
-    //$retVal = "everything good";
-    return is200Response($response,$retVal);
+    $data = [];
+    $data['file_location'] = $fileLocation;
+    $data['message'] = $retVal;
+    $data ['newFileName'] = $objectName;
+    return is200Response($response,$data);
 });
 
 
